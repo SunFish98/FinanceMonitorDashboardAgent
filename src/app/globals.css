@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --dashboard-bg: #0a0e1a;
+  --dashboard-card: #0f1629;
+  --dashboard-card-alt: #131d35;
+  --dashboard-border: #1e2d4a;
+  --dashboard-border-light: #2a3f63;
+  --accent-green: #00d4aa;
+  --accent-red: #ff4d6d;
+  --accent-yellow: #ffd60a;
+  --accent-blue: #4d9fff;
+  --accent-gold: #f59e0b;
+  --text-primary: #e8eaf0;
+  --text-secondary: #8892b0;
+  --text-muted: #4a5568;
+  --background: #0a0e1a;
+  --foreground: #e8eaf0;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--dashboard-bg);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dashboard-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dashboard-border-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.2);
+}
+
+.glow-red {
+  box-shadow: 0 0 12px rgba(255, 77, 109, 0.2);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 12px rgba(255, 214, 10, 0.2);
+}
+
+/* Terminal-style number display */
+.font-terminal {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pulse animation for live indicator */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.live-indicator {
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.card-hover:hover {
+  border-color: var(--dashboard-border-light);
+  transform: translateY(-1px);
+}
+
+/* Status badge */
+.status-beat {
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+}
+
+.status-miss {
+  background: rgba(255, 77, 109, 0.15);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+}
+
+.status-inline {
+  background: rgba(255, 214, 10, 0.15);
+  color: var(--accent-yellow);
+  border: 1px solid rgba(255, 214, 10, 0.3);
+}
+
+.status-pending {
+  background: rgba(74, 85, 104, 0.3);
+  color: var(--text-secondary);
+  border: 1px solid rgba(74, 85, 104, 0.5);
+}
