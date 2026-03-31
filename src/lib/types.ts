@@ -54,6 +54,7 @@ export interface TruthPost {
   date: string; // ISO date string
   url: string;
   imageUrl?: string;
+  isRetruth?: boolean;
 }
 
 export interface FedProbability {

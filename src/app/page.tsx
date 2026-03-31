@@ -29,6 +29,7 @@ interface DashboardState {
   fedProbabilities: FedProbability[];
   truthPosts: TruthPost[];
   truthSource: string;
+  truthError?: string;
   lastUpdated: string | null;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -62,6 +63,7 @@ export default function Dashboard() {
     fedProbabilities: [],
     truthPosts: [],
     truthSource: 'mock',
+    truthError: undefined,
     lastUpdated: null,
     isLoading: true,
     isRefreshing: false,
@@ -138,12 +140,14 @@ export default function Dashboard() {
     // Fetch Truth Social data
     let truthPosts: TruthPost[] = [];
     let truthSource = 'mock';
+    let truthError: string | undefined;
     try {
       const truthResponse = await fetch('/api/truthsocial');
       if (truthResponse.ok) {
         const truthData = await truthResponse.json();
         truthPosts = truthData.posts || [];
         truthSource = truthData.source || 'mock';
+        truthError = truthData.error;
       }
     } catch {
       errors.push('Failed to fetch Truth Social data');
@@ -159,6 +163,7 @@ export default function Dashboard() {
       fedProbabilities,
       truthPosts,
       truthSource,
+      truthError,
       lastUpdated: new Date().toISOString(),
       isLoading: false,
       isRefreshing: false,
@@ -241,6 +246,7 @@ export default function Dashboard() {
                 posts={state.truthPosts}
                 isLoading={state.isLoading}
                 source={state.truthSource}
+                error={state.truthError}
               />
             </div>
           </div>

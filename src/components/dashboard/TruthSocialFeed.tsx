@@ -6,6 +6,7 @@ interface TruthSocialFeedProps {
   posts: TruthPost[];
   isLoading: boolean;
   source: string;
+  error?: string;
 }
 
 function timeAgo(dateString: string): string {
@@ -28,7 +29,12 @@ function PostCard({ post }: { post: TruthPost }) {
           <span className="text-[10px] font-bold text-[#4d9fff]">T</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold text-text-primary truncate">Donald J. Trump</div>
+          <div className="flex items-center gap-1.5">
+            <div className="text-xs font-semibold text-text-primary truncate">Donald J. Trump</div>
+            {post.isRetruth && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">ReTruth</span>
+            )}
+          </div>
           <div className="text-[10px] text-text-muted">@realDonaldTrump</div>
         </div>
         <span className="text-[10px] text-text-muted shrink-0">{timeAgo(post.date)}</span>
@@ -66,7 +72,7 @@ function SkeletonPost() {
   );
 }
 
-export default function TruthSocialFeed({ posts, isLoading, source }: TruthSocialFeedProps) {
+export default function TruthSocialFeed({ posts, isLoading, source, error }: TruthSocialFeedProps) {
   return (
     <section className="bg-dashboard-card border border-dashboard-border rounded-lg p-4 flex flex-col" style={{ maxHeight: '85vh' }}>
       <div className="flex items-center justify-between mb-3 shrink-0">
@@ -75,6 +81,9 @@ export default function TruthSocialFeed({ posts, isLoading, source }: TruthSocia
           <h2 className="text-sm font-semibold text-text-primary">Truth Social</h2>
           {source === 'live' && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-green/10 text-accent-green border border-accent-green/20">实时</span>
+          )}
+          {source === 'error' && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">获取失败</span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -88,9 +97,20 @@ export default function TruthSocialFeed({ posts, isLoading, source }: TruthSocia
       <div className="space-y-2 overflow-y-auto flex-1">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => <SkeletonPost key={i} />)
-          : posts.length === 0
-            ? <div className="text-center py-8 text-text-muted text-xs">暂无动态</div>
-            : posts.map((p) => <PostCard key={p.id} post={p} />)
+          : source === 'error'
+            ? (
+              <div className="text-center py-8 space-y-2">
+                <div className="text-red-400 text-xs">无法连接到 Truth Social</div>
+                <div className="text-text-muted text-[10px]">{error || 'API 请求失败'}</div>
+                <a href="https://truthsocial.com/@realDonaldTrump" target="_blank" rel="noopener noreferrer"
+                  className="inline-block mt-2 text-[10px] text-accent-blue hover:underline">
+                  直接访问 Truth Social →
+                </a>
+              </div>
+            )
+            : posts.length === 0
+              ? <div className="text-center py-8 text-text-muted text-xs">暂无动态</div>
+              : posts.map((p) => <PostCard key={p.id} post={p} />)
         }
       </div>
     </section>
