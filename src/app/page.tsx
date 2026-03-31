@@ -77,7 +77,10 @@ export default function Dashboard() {
     await Promise.allSettled(
       INDICATORS_CONFIG.map(async (indicator) => {
         try {
-          const response = await fetch(`/api/fred/${indicator.fredSeriesId}`);
+          const url = indicator.fredUnits
+            ? `/api/fred/${indicator.fredSeriesId}?units=${indicator.fredUnits}`
+            : `/api/fred/${indicator.fredSeriesId}`;
+          const response = await fetch(url);
           if (response.ok) {
             const data = await response.json();
             // Track the source from the first response (all same key)

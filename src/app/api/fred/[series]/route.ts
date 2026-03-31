@@ -21,6 +21,9 @@ export async function GET(
     );
   }
 
+  const { searchParams } = new URL(request.url);
+  const units = searchParams.get('units') || 'lin';
+
   try {
     const url = new URL('https://api.stlouisfed.org/fred/series/observations');
     url.searchParams.set('series_id', seriesId);
@@ -28,6 +31,7 @@ export async function GET(
     url.searchParams.set('limit', '13');
     url.searchParams.set('sort_order', 'desc');
     url.searchParams.set('file_type', 'json');
+    url.searchParams.set('units', units);
 
     const response = await fetch(url.toString(), {
       cache: 'no-store',

@@ -21,6 +21,8 @@ export interface EconomicIndicator {
   importance: 1 | 2 | 3 | 4 | 5;
   category: IndicatorCategory;
   fredSeriesId: string;
+  fredUnits?: string;
+  displayScale?: number;
   unit: string;
   unitSuffix?: string;
   marketImpact: {

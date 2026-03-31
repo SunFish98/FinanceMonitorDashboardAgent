@@ -8,14 +8,17 @@ interface MacroHeaderProps {
   isRefreshing: boolean;
 }
 
-const QUICK_STATS = [
-  { label: '联邦基金利率', value: '4.25-4.50%', trend: 'hold' as const },
-  { label: '10年期美债', value: '4.32%', trend: 'up' as const },
-  { label: 'DXY美元指数', value: '104.2', trend: 'down' as const },
-  { label: '标普500', value: '5,693', trend: 'up' as const },
-  { label: '黄金', value: '$3,082', trend: 'up' as const },
-  { label: 'WTI原油', value: '$71.4', trend: 'down' as const },
-];
+interface MarketQuote {
+  symbol: string;
+  label: string;
+  price: number | null;
+  changePercent: number | null;
+  prefix: string;
+  suffix: string;
+  decimals: number;
+  trend: 'up' | 'down' | 'flat';
+  error?: string;
+}
 
 function getMarketSession(): { label: string; color: string } {
   const hour = new Date().getUTCHours();
@@ -27,9 +30,25 @@ function getMarketSession(): { label: string; color: string } {
 
 export default function MacroHeader({ lastUpdated, onRefresh, isRefreshing }: MacroHeaderProps) {
   const [now, setNow] = useState(new Date());
+  const [quotes, setQuotes] = useState<MarketQuote[]>([]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/market');
+        if (res.ok) {
+          const data = await res.json();
+          setQuotes(data.quotes || []);
+        }
+      } catch {}
+    };
+    load();
+    const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, []);
 
@@ -45,6 +64,11 @@ export default function MacroHeader({ lastUpdated, onRefresh, isRefreshing }: Ma
   const fmtLast = (s: string | null) => {
     if (!s) return '—';
     return new Date(s).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  };
+
+  const fmtPrice = (q: MarketQuote) => {
+    if (q.price == null) return '—';
+    return `${q.prefix}${q.price.toFixed(q.decimals)}${q.suffix}`;
   };
 
   return (
@@ -96,16 +120,21 @@ export default function MacroHeader({ lastUpdated, onRefresh, isRefreshing }: Ma
 
       {/* Quick Stats Bar */}
       <div className="px-4 lg:px-6 py-1.5 bg-dashboard-card-alt border-t border-dashboard-border flex items-center gap-6 overflow-x-auto">
-        {QUICK_STATS.map((s) => (
-          <div key={s.label} className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] text-text-muted">{s.label}</span>
-            <span className="text-xs font-mono font-medium text-text-primary">{s.value}</span>
-            <span className={`text-[10px] ${s.trend === 'up' ? 'text-accent-green' : s.trend === 'down' ? 'text-accent-red' : 'text-accent-yellow'}`}>
-              {s.trend === 'up' ? '▲' : s.trend === 'down' ? '▼' : '━'}
+        {quotes.map((q) => (
+          <div key={q.symbol} className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-text-muted">{q.label}</span>
+            <span className="text-xs font-mono font-medium text-text-primary">{fmtPrice(q)}</span>
+            <span className={`text-[10px] ${q.trend === 'up' ? 'text-accent-green' : q.trend === 'down' ? 'text-accent-red' : 'text-accent-yellow'}`}>
+              {q.trend === 'up' ? '▲' : q.trend === 'down' ? '▼' : '━'}
             </span>
+            {q.changePercent != null && (
+              <span className={`text-[10px] font-mono ${q.changePercent >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                {q.changePercent >= 0 ? '+' : ''}{q.changePercent.toFixed(2)}%
+              </span>
+            )}
           </div>
         ))}
-        <span className="text-[10px] text-text-muted italic shrink-0 ml-auto">* 行情仅供参考</span>
+        <span className="text-[10px] text-text-muted italic shrink-0 ml-auto">(行情来源: Yahoo Finance)</span>
       </div>
     </header>
   );

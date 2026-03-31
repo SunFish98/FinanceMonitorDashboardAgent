@@ -42,8 +42,20 @@ function IndicatorCard({ indicator }: { indicator: EconomicIndicator }) {
   const statusBg = getStatusBg(status);
   const statusColor = getStatusColor(status);
 
-  const decimals = indicator.unit.includes('%') || indicator.unit.includes('指数') ? 1 : currentValue && currentValue > 1000 ? 0 : 2;
-  const changeAbs = currentValue != null && previousValue != null ? currentValue - previousValue : null;
+  const scale = indicator.displayScale ?? 1;
+  const displayCurrent = currentValue != null ? currentValue * scale : null;
+  const displayPrevious = previousValue != null ? previousValue * scale : null;
+
+  const decimals = indicator.unit.includes('%') ? 1
+    : indicator.unit.includes('指数') || indicator.unit.includes('活动') ? 2
+    : displayCurrent != null && displayCurrent > 1000 ? 0
+    : 2;
+  const changeAbs = displayCurrent != null && displayPrevious != null ? displayCurrent - displayPrevious : null;
+
+  const scaledObservations = (indicator.observations || []).map((o) => ({
+    ...o,
+    value: isNaN(parseFloat(o.value)) ? o.value : String(parseFloat(o.value) * scale),
+  }));
 
   return (
     <div
@@ -55,16 +67,18 @@ function IndicatorCard({ indicator }: { indicator: EconomicIndicator }) {
           <div className="text-[10px] text-text-muted truncate">{indicator.nameEn}</div>
           <div className="text-xs font-medium text-text-primary leading-tight mt-0.5">{indicator.name}</div>
         </div>
-        <span className={cn('shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium', statusBg, statusColor)}>
-          {getStatusLabel(status)}
-        </span>
+        {status && status !== 'pending' && (
+          <span className={cn('shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium', statusBg, statusColor)}>
+            {getStatusLabel(status)}
+          </span>
+        )}
       </div>
 
       <div className="flex items-end justify-between mt-2">
         <div>
-          <div className={cn('text-lg font-mono font-bold leading-none', currentValue != null ? statusColor : 'text-text-muted')}>
-            {currentValue != null ? formatNumber(currentValue, decimals) : '---'}
-            {indicator.unitSuffix && currentValue != null && (
+          <div className={cn('text-lg font-mono font-bold leading-none', displayCurrent != null ? statusColor : 'text-text-muted')}>
+            {displayCurrent != null ? formatNumber(displayCurrent, decimals) : '---'}
+            {indicator.unitSuffix && displayCurrent != null && (
               <span className="text-xs ml-0.5 text-text-secondary">{indicator.unitSuffix}</span>
             )}
           </div>
@@ -77,7 +91,7 @@ function IndicatorCard({ indicator }: { indicator: EconomicIndicator }) {
             )}
           </div>
         </div>
-        <MiniSparkline observations={indicator.observations || []} status={status} />
+        <MiniSparkline observations={scaledObservations} status={status} />
       </div>
 
       <div className="mt-2 flex items-center justify-between">
