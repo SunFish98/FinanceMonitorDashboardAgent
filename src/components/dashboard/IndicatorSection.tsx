@@ -11,6 +11,7 @@ interface IndicatorSectionProps {
   indicators: EconomicIndicator[];
   observationsMap: Record<string, FredObservation[]>;
   isLoading: boolean;
+  fredSource: 'fred' | 'no_key' | 'error' | null;
 }
 
 function MiniSparkline({ observations, status }: { observations: FredObservation[]; status?: string }) {
@@ -114,7 +115,7 @@ function SkeletonCard() {
   );
 }
 
-export default function IndicatorSection({ category, indicators, observationsMap, isLoading }: IndicatorSectionProps) {
+export default function IndicatorSection({ category, indicators, observationsMap, isLoading, fredSource }: IndicatorSectionProps) {
   const label = CATEGORY_LABELS[category] || category;
   const icon = CATEGORY_ICONS[category] || '📊';
 
@@ -142,6 +143,18 @@ export default function IndicatorSection({ category, indicators, observationsMap
         </h2>
         <div className="flex-1 h-px bg-dashboard-border" />
         <span className="text-text-muted text-xs">{indicators.length} 项指标</span>
+        {fredSource === 'fred' && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-green/10 text-accent-green border border-accent-green/20">实时 FRED</span>
+        )}
+        {fredSource === 'no_key' && (
+          <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" rel="noopener noreferrer"
+            className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:underline">
+            ⚠ 需配置 FRED API Key — 点击获取免费 Key
+          </a>
+        )}
+        {fredSource === 'error' && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">FRED 获取失败</span>
+        )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {isLoading

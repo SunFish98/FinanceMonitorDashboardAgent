@@ -1,92 +1,84 @@
 import { NextResponse } from 'next/server';
-import { FedProbability } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-const MOCK_FED_PROBABILITIES: FedProbability[] = [
-  {
-    meetingDate: '2025-05-07',
-    meetingLabel: '2025年5月FOMC',
-    currentRate: 4.25,
-    mostLikelyOutcome: '维持不变 (4.25-4.50%)',
-    probabilities: [
-      { rate: '4.50-4.75', probability: 2, change: 25 },
-      { rate: '4.25-4.50', probability: 78, change: 0 },
-      { rate: '4.00-4.25', probability: 18, change: -25 },
-      { rate: '3.75-4.00', probability: 2, change: -50 },
-    ],
-  },
-  {
-    meetingDate: '2025-06-18',
-    meetingLabel: '2025年6月FOMC',
-    currentRate: 4.25,
-    mostLikelyOutcome: '降息25BP (4.00-4.25%)',
-    probabilities: [
-      { rate: '4.25-4.50', probability: 25, change: 0 },
-      { rate: '4.00-4.25', probability: 52, change: -25 },
-      { rate: '3.75-4.00', probability: 20, change: -50 },
-      { rate: '3.50-3.75', probability: 3, change: -75 },
-    ],
-  },
-  {
-    meetingDate: '2025-07-30',
-    meetingLabel: '2025年7月FOMC',
-    currentRate: 4.25,
-    mostLikelyOutcome: '降息25BP (4.00-4.25%)',
-    probabilities: [
-      { rate: '4.25-4.50', probability: 15, change: 0 },
-      { rate: '4.00-4.25', probability: 45, change: -25 },
-      { rate: '3.75-4.00', probability: 30, change: -50 },
-      { rate: '3.50-3.75', probability: 10, change: -75 },
-    ],
-  },
-  {
-    meetingDate: '2025-09-17',
-    meetingLabel: '2025年9月FOMC',
-    currentRate: 4.25,
-    mostLikelyOutcome: '降息25-50BP',
-    probabilities: [
-      { rate: '4.00-4.25', probability: 20, change: -25 },
-      { rate: '3.75-4.00', probability: 40, change: -50 },
-      { rate: '3.50-3.75', probability: 30, change: -75 },
-      { rate: '3.25-3.50', probability: 10, change: -100 },
-    ],
-  },
+// CME FedWatch probability data endpoints (public, no auth required)
+const CME_ENDPOINTS = [
+  'https://www.cmegroup.com/CmeWS/mvc/FFMDataHandler/getFedFundProbability',
+  'https://www.cmegroup.com/CmeWS/mvc/FFMDataHandler/getFedFundProbabilityData',
 ];
 
+interface CmeProbabilityEntry {
+  date?: string;
+  meetingDate?: string;
+  probabilities?: Array<{ rate: number | string; probability: number | string }>;
+  probs?: Array<{ rate: number | string; prob: number | string }>;
+}
+
+function parseCmeResponse(data: unknown): { parsed: boolean; data: unknown } {
+  // CME returns various formats — try to detect if it's usable data
+  if (!data) return { parsed: false, data: null };
+  if (Array.isArray(data) && data.length > 0) return { parsed: true, data };
+  if (typeof data === 'object' && data !== null) {
+    const keys = Object.keys(data as object);
+    if (keys.length > 0) return { parsed: true, data };
+  }
+  return { parsed: false, data: null };
+}
+
 export async function GET() {
-  try {
-    // Attempt to fetch from CME FedWatch
-    const cmeUrl =
-      'https://www.cmegroup.com/CmeWS/mvc/FFMDataHandler/getFedFundProbability';
+  const errors: string[] = [];
+  let rawData: unknown = null;
 
-    const response = await fetch(cmeUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; FinanceDashboard/1.0)',
-        Accept: 'application/json',
-      },
-      next: { revalidate: 1800 },
-      signal: AbortSignal.timeout(5000),
-    });
+  // Try each CME endpoint
+  for (const url of CME_ENDPOINTS) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json, text/plain, */*',
+          Referer: 'https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html',
+          Origin: 'https://www.cmegroup.com',
+        },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(8000),
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      // If we got real data, try to parse it
-      if (data && Array.isArray(data)) {
-        return NextResponse.json({
-          probabilities: MOCK_FED_PROBABILITIES, // Use mock as CME format varies
-          source: 'mock',
-          rawCme: data.slice(0, 2),
-        });
+      if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('json')) {
+          const data = await response.json();
+          const { parsed } = parseCmeResponse(data);
+          if (parsed) {
+            rawData = data;
+            break;
+          }
+        }
+      } else {
+        errors.push(`${url} returned ${response.status}`);
       }
+    } catch (err) {
+      errors.push(`${url}: ${err instanceof Error ? err.message : 'timeout/network error'}`);
     }
-  } catch {
-    // Fall through to mock data
   }
 
+  if (rawData !== null) {
+    // Return the raw CME data — let the client display it or handle parsing
+    return NextResponse.json({
+      probabilities: [],
+      source: 'cme_raw',
+      raw: rawData,
+      lastUpdated: new Date().toISOString(),
+    });
+  }
+
+  // CME blocked or unavailable — return error, no fake data
   return NextResponse.json({
-    probabilities: MOCK_FED_PROBABILITIES,
-    source: 'mock',
+    probabilities: [],
+    source: 'error',
+    error: 'CME FedWatch API不可用。请直接访问 https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html',
+    errors,
     lastUpdated: new Date().toISOString(),
   });
 }

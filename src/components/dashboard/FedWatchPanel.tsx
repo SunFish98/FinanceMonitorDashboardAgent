@@ -9,7 +9,10 @@ interface FedWatchPanelProps {
   probabilities: FedProbability[];
   currentRate: number;
   currentRateRange: string;
+  rateSource: string;
   isLoading: boolean;
+  fedwatchSource: string;
+  fedwatchError?: string;
 }
 
 function getBarColor(change: number): string {
@@ -117,7 +120,7 @@ function TimelineItem({ meeting }: { meeting: FOMCMeeting }) {
   );
 }
 
-export default function FedWatchPanel({ meetings, probabilities, currentRate, currentRateRange, isLoading }: FedWatchPanelProps) {
+export default function FedWatchPanel({ meetings, probabilities, currentRate, currentRateRange, rateSource, isLoading, fedwatchSource, fedwatchError }: FedWatchPanelProps) {
   const now = new Date();
   const visibleMeetings = meetings.filter((m) => {
     const daysDiff = (now.getTime() - new Date(m.date).getTime()) / (1000 * 60 * 60 * 24);
@@ -134,7 +137,10 @@ export default function FedWatchPanel({ meetings, probabilities, currentRate, cu
             <h2 className="text-sm font-semibold text-text-primary">🏦 FOMC会议时间线</h2>
           </div>
           <div className="text-right">
-            <div className="text-[10px] text-text-muted">当前利率目标区间</div>
+            <div className="text-[10px] text-text-muted">当前利率目标区间
+              {rateSource === 'fred' && <span className="ml-1 text-accent-green">(实时)</span>}
+              {rateSource === 'hardcoded' && <span className="ml-1 text-yellow-500">(静态)</span>}
+            </div>
             <div className="text-sm font-bold font-mono text-accent-gold">{currentRateRange}</div>
           </div>
         </div>
@@ -154,26 +160,45 @@ export default function FedWatchPanel({ meetings, probabilities, currentRate, cu
       </section>
 
       {/* CME FedWatch Probabilities */}
-      {probabilities.length > 0 && (
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-accent-gold" />
-            <h2 className="text-sm font-semibold text-text-primary">CME FedWatch — 降息概率</h2>
-            <div className="flex-1 h-px bg-dashboard-border" />
+      <section className="bg-dashboard-card border border-dashboard-border rounded-lg p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-5 rounded-full bg-accent-gold" />
+          <h2 className="text-sm font-semibold text-text-primary">CME FedWatch — 降息概率</h2>
+          <div className="flex-1 h-px bg-dashboard-border" />
+          {probabilities.length > 0 && (
             <div className="flex items-center gap-3 text-[10px] text-text-secondary">
               <span><span className="text-accent-green">■</span> 降息</span>
               <span><span className="text-text-secondary">■</span> 维持</span>
               <span><span className="text-accent-red">■</span> 加息</span>
             </div>
-            <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-blue hover:underline">
-              查看原始数据 →
-            </a>
-          </div>
+          )}
+          <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent-blue hover:underline shrink-0">
+            查看原始数据 →
+          </a>
+        </div>
+
+        {probabilities.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {probabilities.map((fp) => <ProbabilityCard key={fp.meetingDate} fp={fp} />)}
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+            <div className="text-2xl">🔒</div>
+            <div className="text-sm text-text-secondary">CME FedWatch 数据不可用</div>
+            <div className="text-xs text-text-muted max-w-sm">
+              {fedwatchError || 'CME 服务器拒绝了服务端请求。请直接访问 CME 官网查看实时降息概率。'}
+            </div>
+            <a
+              href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 px-3 py-1.5 rounded border border-accent-blue/40 text-accent-blue text-xs hover:bg-accent-blue/10 transition-colors"
+            >
+              在 CME 官网查看实时降息概率 →
+            </a>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -127,9 +127,56 @@ function updateMeetingStatuses(meetings: FOMCMeeting[]): FOMCMeeting[] {
   });
 }
 
+async function fetchCurrentFedRate(apiKey: string): Promise<{ rate: number; range: string } | null> {
+  try {
+    // DFEDTARU = Fed Funds Target Rate Upper Bound
+    // DFEDTARL = Fed Funds Target Rate Lower Bound
+    const [upperRes, lowerRes] = await Promise.all([
+      fetch(
+        `https://api.stlouisfed.org/fred/series/observations?series_id=DFEDTARU&api_key=${apiKey}&limit=1&sort_order=desc&file_type=json`,
+        { cache: 'no-store', signal: AbortSignal.timeout(8000) }
+      ),
+      fetch(
+        `https://api.stlouisfed.org/fred/series/observations?series_id=DFEDTARL&api_key=${apiKey}&limit=1&sort_order=desc&file_type=json`,
+        { cache: 'no-store', signal: AbortSignal.timeout(8000) }
+      ),
+    ]);
+
+    if (upperRes.ok && lowerRes.ok) {
+      const upperData = await upperRes.json();
+      const lowerData = await lowerRes.json();
+      const upper = parseFloat(upperData.observations?.[0]?.value);
+      const lower = parseFloat(lowerData.observations?.[0]?.value);
+      if (!isNaN(upper) && !isNaN(lower)) {
+        return {
+          rate: (upper + lower) / 2,
+          range: `${lower.toFixed(2)}% - ${upper.toFixed(2)}%`,
+        };
+      }
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
 export async function GET() {
   const meetings = updateMeetingStatuses(FOMC_MEETINGS_2025_2026);
-  const currentRate = 4.25; // Current federal funds rate (mid-point)
+
+  // Try to get live current rate from FRED
+  const apiKey = process.env.NEXT_PUBLIC_FRED_API_KEY;
+  let currentRate = 4.25;
+  let currentRateRange = '4.25% - 4.50%';
+  let rateSource = 'hardcoded';
+
+  if (apiKey && apiKey !== 'your_fred_api_key_here') {
+    const liveRate = await fetchCurrentFedRate(apiKey);
+    if (liveRate) {
+      currentRate = liveRate.rate;
+      currentRateRange = liveRate.range;
+      rateSource = 'fred';
+    }
+  }
 
   const upcomingMeetings = meetings
     .filter((m) => m.status !== 'past')
@@ -145,7 +192,8 @@ export async function GET() {
     upcomingMeetings,
     pastMeetings,
     currentRate,
-    currentRateRange: '4.25% - 4.50%',
+    currentRateRange,
+    rateSource,
     lastUpdated: new Date().toISOString(),
   });
 }
