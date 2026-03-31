@@ -8,7 +8,6 @@ import TruthSocialFeed from '@/components/dashboard/TruthSocialFeed';
 import {
   EconomicIndicator,
   FOMCMeeting,
-  TruthPost,
   FedProbability,
   FredObservation,
 } from '@/lib/types';
@@ -30,9 +29,6 @@ interface DashboardState {
   fedProbabilities: FedProbability[];
   fedwatchSource: string;
   fedwatchError?: string;
-  truthPosts: TruthPost[];
-  truthSource: string;
-  truthError?: string;
   lastUpdated: string | null;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -52,9 +48,6 @@ export default function Dashboard() {
     fedProbabilities: [],
     fedwatchSource: 'pending',
     fedwatchError: undefined,
-    truthPosts: [],
-    truthSource: 'pending',
-    truthError: undefined,
     lastUpdated: null,
     isLoading: true,
     isRefreshing: false,
@@ -143,22 +136,6 @@ export default function Dashboard() {
       errors.push('Failed to fetch FedWatch data');
     }
 
-    // Fetch Truth Social data
-    let truthPosts: TruthPost[] = [];
-    let truthSource = 'error';
-    let truthError: string | undefined;
-    try {
-      const truthResponse = await fetch('/api/truthsocial');
-      if (truthResponse.ok) {
-        const truthData = await truthResponse.json();
-        truthPosts = truthData.posts || [];
-        truthSource = truthData.source || 'error';
-        truthError = truthData.error;
-      }
-    } catch {
-      errors.push('Failed to fetch Truth Social data');
-    }
-
     setState((prev) => ({
       ...prev,
       indicators,
@@ -171,9 +148,6 @@ export default function Dashboard() {
       fedProbabilities,
       fedwatchSource,
       fedwatchError,
-      truthPosts,
-      truthSource,
-      truthError,
       lastUpdated: new Date().toISOString(),
       isLoading: false,
       isRefreshing: false,
@@ -253,12 +227,7 @@ export default function Dashboard() {
           {/* Right Column (narrower) - Truth Social Feed */}
           <div className="xl:w-96 flex-shrink-0">
             <div className="sticky top-[105px]">
-              <TruthSocialFeed
-                posts={state.truthPosts}
-                isLoading={state.isLoading}
-                source={state.truthSource}
-                error={state.truthError}
-              />
+              <TruthSocialFeed />
             </div>
           </div>
         </div>
